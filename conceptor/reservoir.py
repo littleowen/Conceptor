@@ -6,6 +6,7 @@ Created on May 25, 2015
 """
 
 import numpy as np
+import scipy as sp
 import numpy.matlib
 import conceptor.util as util
 import conceptor.logic as logic
@@ -74,6 +75,46 @@ class Reservoir:
     self.Cs.append([]) 
     self.Cs.append([]) 
     self.Cs.append([])
+    
+  def clean_storage(self):
+    self.W_out = np.asarray([])
+    self.W = np.asarray([])
+    
+    self.x_collectors = []
+    self.pattern_Rs = []
+    self.UR_collectors = []
+    self.SR_collectors = []
+    self.pattern_collectors = []
+    
+    self.all_train_args = np.asarray([])
+    self.all_train_old_args = np.asarray([])
+    self.all_train_outs = np.asarray([])
+    
+    self.Cs = [] 
+    self.Cs.append([]) 
+    self.Cs.append([]) 
+    self.Cs.append([]) 
+    self.Cs.append([])
+    
+  def augment(self,
+              data):
+    """
+    Augment the dimension of the original data in reservoir   
+    
+    @param data: original data to be augmented
+    """
+    datalen = data.shape[1]
+    x = np.random.randn(self.size_net, 1)
+    xs = np.tile(x, (1, datalen))
+    bias = np.tile(self.W_bias, (1, datalen))
+    resultvec = np.zeros((self.size_net, datalen, data.shape[2]))
+    for i in range(data.shape[2]):
+      us = data[:, : , i]
+      xs = np.tanh(self.W_star.dot(xs) + self.W_in.dot(us) + bias)
+      resultvec[:, :, i] = xs
+      return resultvec.swapaxes(1,2).reshape(-1, datalen, order = 'F'), resultvec
+      
+    
     
   def drive_reservoir(self,
                       pattern,
@@ -210,4 +251,51 @@ class Reservoir:
     
     self.compute_W_out(self.varrho_out)
     self.compute_W(self.varrho_w)
+    
+    
+  def recognition_train(self, datalist, apN = 9, out_mode = "simple"):
+    """
+    Training procedure for dynamic recogniton
+    
+    @param datalist
+    """
+    R_list = []
+    C_prem_list = []
+    apsExploreExponents = np.asarray(range(apN))
+    apt_list = []
+    C_list = []
+    intPts = np.arange(apsExploreExponents[0], apsExploreExponents[-1] + 0.01, 0.01)
+    for data in datalist:
+      R = (data.dot(data.T)) / data.shape[1]
+      R_list.append(R)
+      I = np.eye(R.shape[0])
+      C_prem = R.dot(np.linalg.inv(R + I))
+      C_prem_list.append(C_prem)
+      Cnorm_list = []
+      for i in range(apN):
+        C_temp = logic.PHI(C_prem, 2 ** apsExploreExponents[i])
+        Cnorm_list.append(np.linalg.norm(C_temp ,'fro') ** 2)
+      norms = np.asarray(Cnorm_list)
+      interpfun = sp.interpolate.interp1d(apsExploreExponents, norms, kind = 'cubic')
+      norms_Intpl = interpfun(intPts)
+      norms_Intpl_Grad = (norms_Intpl[1:] - norms_Intpl[0:-1]) / 0.01
+      aptind = np.argmax(abs(norms_Intpl_Grad), axis = 0)
+      apt = 2 ** intPts[aptind]
+      apt_list.append(apt)
+    apt = np.mean(apt_list)
+    for C_prem in C_prem_list:
+      C_list.append(logic.PHI(C_prem, apt))
+    if out_mode == "complete":
+      return C_list, R_list, C_prem_list, apt_list
+    else:
+      return C_list
+
+
+  def recognition_predict(self, testdata, C_list):
+    evidence_list = []
+    for C in C_list:
+      evidence = sum(testdata * (C.dot(testdata)))
+      evidence_list.append(evidence)
+    evidence = np.row_stack(evidence_list)
+    return np.argmax(evidence, axis = 0), evidence
     

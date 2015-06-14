@@ -137,4 +137,10 @@ def init_weights(size_in,
     
   return W_star, W_in, W_bias;
 
+def consecdata(datavec, timestep = 4):
+  resultvec = datavec
+  for i in range(timestep):
+    resultvec = np.dstack([resultvec, np.hstack([datavec[:, (i + 1):], datavec[:, 0:(i + 1)]])])
+  return resultvec
+
 
