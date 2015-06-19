@@ -10,6 +10,8 @@ import scipy as sp
 import numpy.matlib
 import conceptor.util as util
 import conceptor.logic as logic
+from scipy import interpolate
+
 
 class Reservoir:
   """
@@ -59,6 +61,7 @@ class Reservoir:
                                                       bias_scale)
     self.W_out = np.asarray([])
     self.W = np.asarray([])
+    self.random_start = np.asarray([])
     
     self.x_collectors = []
     self.pattern_Rs = []
@@ -97,22 +100,26 @@ class Reservoir:
     self.Cs.append([])
     
   def augment(self,
-              data):
+              data, repeat):
     """
     Augment the dimension of the original data in reservoir   
     
     @param data: original data to be augmented
     """
     datalen = data.shape[1]
-    x = np.random.randn(self.size_net, 1)
+    if not self.random_start.size:
+      self.random_start = np.random.randn(self.size_net, 1)
+    x = self.random_start
     xs = np.tile(x, (1, datalen))
     bias = np.tile(self.W_bias, (1, datalen))
     resultvec = np.zeros((self.size_net, datalen, data.shape[2]))
-    for i in range(data.shape[2]):
-      us = data[:, : , i]
-      xs = np.tanh(self.W_star.dot(xs) + self.W_in.dot(us) + bias)
-      resultvec[:, :, i] = xs
-      return resultvec.swapaxes(1,2).reshape(-1, datalen, order = 'F'), resultvec
+    for j in range(repeat):
+      for i in range(data.shape[2]):
+        us = data[:, : , i]
+        xs = np.tanh(self.W_star.dot(xs) + self.W_in.dot(us) + bias)
+        if j == repeat - 1:
+          resultvec[:, :, i] = xs
+    return resultvec.swapaxes(1,2).reshape(-1, datalen, order = 'F'), resultvec
       
     
     
@@ -299,3 +306,82 @@ class Reservoir:
     evidence = np.row_stack(evidence_list)
     return np.argmax(evidence, axis = 0), evidence
     
+  def compute_conceptors(self, all_train_states,
+                         apN):
+    CPoss = []
+    RPoss = []
+    ROthers = []
+    CNegs = []
+    statesAllClasses = np.hstack(all_train_states)
+    Rall = statesAllClasses.dot(statesAllClasses.T)
+    I = np.eye(Rall.shape[0])
+    for i in range(len(all_train_states)):
+      R = all_train_states[i].dot(all_train_states[i].T)
+      Rnorm = R / all_train_states[i].shape[1]
+      RPoss.append(Rnorm)
+      ROther = Rall - R
+      ROthersNorm = ROther / (statesAllClasses.shape[1] - all_train_states[i].shape[1])
+      ROthers.append(ROthersNorm)
+      CPossi = []
+      CNegsi = []
+      for api in range(apN):
+        C = Rnorm.dot(np.linalg.inv(Rnorm + (2 ** float(api)) ** (-2) * I))
+        CPossi.append(C)
+        COther = ROthersNorm.dot(np.linalg.inv(ROthersNorm + (2 ** float(api)) ** (-2) * I))
+        CNegsi.append(I - COther)
+        CPoss.append(CPossi)
+        CNegs.append(CNegsi)
+    return CPoss, RPoss, ROthers, CNegs
+
+  def compute_aperture(self,
+                       C_pos_list,
+                       apN):
+    classnum = len(C_pos_list)
+    best_aps_pos = []
+    apsExploreExponents = np.asarray(range(apN))
+    intPts = np.arange(apsExploreExponents[0], apsExploreExponents[-1] + 0.01, 0.01)
+    for i in range(classnum):
+      norm_pos = np.zeros(apN)
+      for api in range(apN):
+        norm_pos[api] = np.linalg.norm(C_pos_list[i][api], 'fro') ** 2      
+      f_pos = interpolate.interp1d(np.arange(apN), norm_pos, kind="cubic")
+      norm_pos_inter = f_pos(intPts)
+      norm_pos_inter_grad = (norm_pos_inter[1:] - norm_pos_inter[0:-1]) / 0.01
+      max_ind_pos = np.argmax(np.abs(norm_pos_inter_grad), axis = 0)    
+      best_aps_pos.append(2 ** intPts[max_ind_pos])  
+    return best_aps_pos
+
+  def compute_best_conceptor(self,
+                             R_list,
+                             best_apt):
+    classnum = len(R_list)
+    C_best_list = []
+    I = np.eye(R_list[0].shape[0])
+    for i in range(classnum):
+      C_best = R_list[i].dot(np.linalg.inv(R_list[i] + best_apt ** (-2) * I))
+      C_best_list.append(C_best)      
+    return C_best_list
+
+  def combine_evidence(self,
+                      evidence_pos,
+                      evidence_neg):
+    
+    minValPos = np.amin(evidence_pos, axis = 0)
+    maxValPos = np.amax(evidence_pos, axis = 0)
+    
+    rangePos = maxValPos - minValPos
+    
+    minValNeg = np.amin(evidence_neg, axis = 0)
+    maxValNeg = np.amax(evidence_neg, axis = 0)
+        
+    rangeNeg = maxValNeg - minValNeg
+        
+    posEvVecNorm = (evidence_pos - np.tile(minValPos, (evidence_pos.shape[0],1))) / np.tile(
+        rangePos, (evidence_pos.shape[0],1))
+    
+    negEvVecNorm = (evidence_neg - np.tile(minValNeg, (evidence_neg.shape[0],1))) / np.tile(
+    rangeNeg, (evidence_neg.shape[0],1))
+        
+    combEv = posEvVecNorm + negEvVecNorm
+    results_comb = np.argmax(combEv, axis = 0)
+    return results_comb, combEv
