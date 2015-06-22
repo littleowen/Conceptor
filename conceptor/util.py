@@ -10,7 +10,7 @@ import pickle as pickle
 import numpy as np
 import numpy.matlib
 import scipy.sparse
-import scipy.sparse.linalg;
+import scipy.sparse.linalg
 import matplotlib.pyplot as plt
 from scipy.lib.six import xrange
 from scipy.sparse.coo import coo_matrix
@@ -85,62 +85,95 @@ greater than %d - this is not supported on this machine
 
 def generate_internal_weights(size_net,
                               density):
-  """
-  Generate internal weights in a reservoir
-  
-  @param size_net: number of neurons in the reservoir
-  @param density: density of the network (connectivity)
-  
-  @return: weights: a sparse matrix of internal weights
-  """
-  success = 0
-  while not success:
-    try:
-      weights = sprandn(m = size_net, n = size_net, density = density, format = 'coo')
-      eigw, _ = scipy.sparse.linalg.eigs(weights, 1)
-      success = 1
-    except:
-      pass
-  weights /= np.abs(eigw[0])
-  
-  return weights.toarray();
+    """
+    Generate internal weights in a reservoir
+
+    @param size_net: number of neurons in the reservoir
+    @param density: density of the network (connectivity)
+
+    @return: weights: a sparse matrix of internal weights
+    """
+    success = 0
+    while not success:
+        try:
+            weights = sprandn(m = size_net, n = size_net, density = density, format = 'coo')
+            eigw, _ = scipy.sparse.linalg.eigs(weights, 1)
+            success = 1
+        except:
+            pass
+    weights /= np.abs(eigw[0])
+
+    return weights.toarray()
 
 def init_weights(size_in,
                  size_net,
                  sr,
                  in_scale,
                  bias_scale):
-  """
-  Initialize weights for a new conceptor network
-  
-  @param size_in: number of input
-  @param size_net: number of internal neurons 
-  @param sr: spectral radius
-  @param in_scale: scaling of input weights
-  @param bias_scale: size of bias
-  """
-  
-  # generate internal weights
-  if size_net <= 20:
-    connectivity = 1
-  else:
-    connectivity = 10. / size_net
-  W_star_raw = generate_internal_weights(size_net = size_net, density = connectivity);
+    """
+    Initialize weights for a new conceptor network
 
-  W_star = W_star_raw * sr;
-  
-  # generate input weights
-  W_in = np.random.randn(size_net, size_in) * in_scale;
-  
-  # generate bias
-  W_bias = np.random.randn(size_net, 1) * bias_scale;
-    
-  return W_star, W_in, W_bias;
+    @param size_in: number of input
+    @param size_net: number of internal neurons 
+    @param sr: spectral radius
+    @param in_scale: scaling of input weights
+    @param bias_scale: size of bias
+    """
+
+    # generate internal weights
+    if size_net <= 20:
+        connectivity = 1
+    else:
+        connectivity = 10. / size_net
+    W_star_raw = generate_internal_weights(size_net = size_net, density = connectivity)
+
+    W_star = W_star_raw * sr
+
+    # generate input weights
+    W_in = np.random.randn(size_net, size_in) * in_scale
+
+    # generate bias
+    W_bias = np.random.randn(size_net, 1) * bias_scale
+
+    return W_star, W_in, W_bias
 
 def consecdata(datavec, timestep = 4):
-  resultvec = datavec
-  for i in range(timestep):
-    resultvec = np.dstack([resultvec, np.hstack([datavec[:, (i + 1):], datavec[:, 0:(i + 1)]])])
-  return resultvec
+    resultvec = datavec
+    for i in range(timestep):
+        resultvec = np.dstack([resultvec, np.hstack([datavec[:, (i + 1):], datavec[:, 0:(i + 1)]])])
+    return resultvec
 
+
+def normalize_data(data):
+    """
+    Nomarlize all the training data to be in range [0,1]   
+
+    @param data: a list of training data, each corresponding to one class to be recognized
+    """
+
+    num_data = len(data)
+    all_data = np.hstack(data)
+
+    max_vals = np.max(all_data, 1)
+    min_vals = np.min(all_data, 1)
+    shifts = - min_vals
+    scales = 1. / (max_vals - min_vals)
+    norm_data = []
+
+    for s in range(num_data):
+        d = data[s] + np.matlib.repmat(shifts[None].T, 1 ,data[s].shape[1])
+        d = d.T.dot(np.diag(scales)).T
+        norm_data.append(d)
+    return norm_data, shifts, scales
+
+
+
+def transform_data(data, shifts, scales):
+    num_data = len(data)
+    trans_data = []
+    for s in range(num_data):
+        d = data[s] + np.matlib.repmat(shifts[None].T, 1, data[s].shape[1])
+        d = d.T.dot(np.diag(scales)).T
+        trans_data.append(d)
+    return trans_data
 
