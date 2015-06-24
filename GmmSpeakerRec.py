@@ -22,8 +22,9 @@ class GMMRec(object):
 
     def enroll(self, name, signal, fs = 44100):
         signal_new = remove_silence(fs, signal)
-        mfcc = librosa.feature.mfcc(y = signal_new, sr = fs, n_mfcc = 15)
-        mfcc = mfcc.T
+        hop_length = np.min([0.016 * fs, 512])
+        mfcc = librosa.feature.mfcc(y = signal_new, sr = fs, n_mfcc = 15, hop_length = hop_length)
+        mfcc = mfcc.T   
         mu = np.mean(mfcc, axis = 0)
         sigma = np.std(mfcc, axis = 0)
         feature = (mfcc - mu) / sigma
@@ -42,7 +43,8 @@ class GMMRec(object):
         signal_new = remove_silence(fs, signal)
         # if len(signal_new) < len(signal) / 4:
         #     return "Silence"
-        mfcc = librosa.feature.mfcc(y = signal_new, sr = fs, n_mfcc = 15)
+        hop_length = np.min([0.016 * fs, 512])
+        mfcc = librosa.feature.mfcc(y = signal_new, sr = fs, n_mfcc = 15, hop_length = hop_length)
         mfcc = mfcc.T    
         mu = np.mean(mfcc, axis = 0)
         sigma = np.std(mfcc, axis = 0)
@@ -75,8 +77,8 @@ class GMMRec(object):
             signali = signal[fs * head : np.min([fs * tail, fs * totallen])]           
             self.showresult(signali, fs, head, disp)
             head += step
-        signali = signal[fs * (head - step):]
-        self.showresult(signali, fs, head, disp)
+        #signali = signal[fs * (head - step):]
+        #self.showresult(signali, fs, head, disp)
         
             
             
