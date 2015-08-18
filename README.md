@@ -45,6 +45,7 @@ Gender = SR.GMMRec() # Create a new recognizer
 ```
 
 1. Training:
+
 Note: It is highly recommneded to get the training features from audio signals that do not contain any silence, you can use the remove_silence function provided in the module:
 
 ```
@@ -76,5 +77,7 @@ test_mfcc = np.array(get_test_mfcc()) # test_mfcc.shape = (N3, D)
 (result, log_lkld) = Gender.predict(test_mfcc) # predict the speaker, where result is the most porbabel speaker label, and log_lkld is the log likelihood for test_mfcc to be from the recognized speaker. 
 
 ```
+
+See https://github.com/littleowen/Conceptor/blob/master/ModuleTest.ipynb for a concrete example.
 
 
