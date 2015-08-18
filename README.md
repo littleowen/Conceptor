@@ -40,12 +40,20 @@ Gender identifier as a usage example:
 
 ```
 import speaker.recognition as SR
-Gender = SR.GMMRec()
+Gender = SR.GMMRec() # Create a new recognizer
 
 ```
 
-
 1. Training:
+Note: It is highly recommneded to get the training features from audio signals that do not contain any silence, you can use the remove_silence function provided in the module:
+
+```
+import scipy.io.wavfile as wav
+from speaker.silence import remove_silence
+(samplerate, signal) = wav.read(audio_path)
+clean_signal = remove_silence(samplerate, signal)
+```
+
 
 ```
 import numpy as np
@@ -63,7 +71,7 @@ Gender.dump('gender.model') # save the trained model into a file named "gender.m
 2. Testing:
 
 ```
-Gender = SR.load('gender.model') # this is not necessary if you just trained the model
+Gender = SR.GMMRec.load('gender.model') # this is not necessary if you just trained the model
 test_mfcc = np.array(get_test_mfcc()) # test_mfcc.shape = (N3, D)
 (result, log_lkld) = Gender.predict(test_mfcc) # predict the speaker, where result is the most porbabel speaker label, and log_lkld is the log likelihood for test_mfcc to be from the recognized speaker. 
 
