@@ -38,7 +38,7 @@ The following changes are made compared with the previous version:
 
 3. Added functions to recognize features directly, so that it is ready for the shared features from the pipeline.
 
-4. Return the log likelihood of each prediction so that one can make rejections on untrained classes
+4. Return the log likelihood of each prediction so that one can make rejections on untrained classes, which is useful for searching speakers in audio files.
 
 Gender identifier as a usage example:
 
