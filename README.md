@@ -31,9 +31,13 @@ http://reservoir-conceptors.blogspot.kr/2015/07/emotion-recognition-and-tone.htm
 
 # Python Speaker Identificaiton Module written for the RedHen Audio Analysis Pipeline
 The following changes are made compared with the previous version:
+
 1. Shift from Python3 to Python2
+
 2. Replaced GMM from Sklearn by GMM from PyCASP
+
 3. Added functions to recognize features directly, so that it is ready for the shared features from the pipeline.
+
 4. Return the log likelihood of each prediction so that one can make rejections on untrained classes
 
 Gender identifier as a usage example:
