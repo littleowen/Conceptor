@@ -29,8 +29,8 @@ http://reservoir-conceptors.blogspot.kr/2015/07/emotion-recognition-and-tone.htm
 
 
 
-# Python Speaker Identificaiton Module written for the RedHen Audio Analysis Pipeline
-The following changes are made compared with the previous version:
+# Python Speaker Identification Module written for the RedHen Audio Analysis Pipeline
+The source code for this module is in the folder called "speaker", The following changes are made compared with the previous version:
 
 1. Shift from Python3 to Python2
 
@@ -87,7 +87,7 @@ See https://github.com/littleowen/Conceptor/blob/master/ModuleTest.ipynb for a c
 
 # SpeakerID.py program for the RedHen pipeline
 
-This program takes use of the speaker ID module from above and speaker diarization results to output .spk file that has consistent format with other RedHen output files.
+This program (SpeakerID.py) takes use of the speaker ID module from above and speaker diarization results to output .spk file that has consistent format with other RedHen output files.
 
 Usage Example:
 
